@@ -1,0 +1,543 @@
+% Home Network Diagram (with images)
+% Author: Michael Bugert
+% License: CC BY 4.0
+\documentclass{standalone}
+
+\usepackage[utf8]{inputenc}
+\usepackage[sfdefault]{noto}
+\usepackage[T1]{fontenc}
+\usepackage{enumitem}
+\usepackage[fixed]{fontawesome5}
+\usepackage{etoolbox}
+\usepackage{tcolorbox}
+\usepackage{tikz}
+\usepackage[hidelinks]{hyperref}
+
+\tcbuselibrary{skins,raster}
+\usetikzlibrary{positioning,matrix,fit,decorations.pathreplacing}
+
+\graphicspath{{img/}}
+
+% colors for subnetworks
+\definecolor{subnet-none}{HTML}{000000}
+\definecolor{subnet-home}{HTML}{E57400}
+\definecolor{subnet-guest}{HTML}{14C300}
+\definecolor{subnet-vpn}{HTML}{AD0022}
+\definecolor{dockerBright}{HTML}{0A97C4}
+\definecolor{dockerDark}{HTML}{088AB4}
+
+\tcbset{
+	skin=enhanced,
+	boxrule=0.1em,
+	left=0.25em,
+	right=0.25em,
+	host description box/.style={
+		width=19em,
+		sidebyside,
+		righthand ratio=0.4,
+		fonttitle=\bfseries\large,
+		fontupper=\small,
+		fontlower=\small
+	},
+	interfaces raster/.style={
+		raster columns=1,
+		raster width=6.75em,
+		% fix raster height to accomodate for fontawesome icon height differences
+		raster height=4.25em,
+		raster row skip=0.4em,
+		raster every box/.style={
+			fontupper=\ttfamily,
+			left=0em,
+			right=0em,
+			top=.15em,
+			bottom=.15em,
+			valign=center
+		}
+	},
+	services/.style={
+		raster columns=1,
+		boxrule=0.1em,
+		raster width=14em,
+		raster row skip=0.4em,
+		raster every box/.style={
+			left=0em,
+			right=0em,
+			top=.15em,
+			bottom=.15em,
+			fontupper=\small,
+			boxrule=0.1em
+		}
+	},
+	% Never drawn, only used as a container. Width is set to the same width as "services". If width is not specified, the raster would extend much further towards the right because the default width is \linewidth (uncomment 'blankest' to see it).
+	services raster/.style={
+		blankest,
+		width=14em
+	},
+	dockerized raster/.style={
+		title={Dockerized\hfill\includegraphics[height=12pt]{services/docker}},
+		fonttitle=\bfseries,
+		colframe=dockerDark,
+		colback=dockerBright,
+		left=0.25em,
+		right=0.25em
+	},
+	devices raster/.style={
+		width=20em,
+		fonttitle=\bfseries\large,
+		fontupper=\small,
+		attach boxed title to top left,
+		boxed title style={frame hidden, opacityback=0.0, left=0em},
+		colback=white,
+		coltitle=black!75!white
+	},
+	devices/.style={
+		raster columns=1,
+		boxrule=0.1em,
+		raster width=20em,
+		raster row skip=0.4em,
+		raster every box/.style={
+			left=0em,
+			right=0em,
+			top=.15em,
+			bottom=.15em,
+			fontupper=\small,
+			boxrule=0.1em,
+			height=3em,
+			valign=center
+		}
+	}
+}
+
+\tikzset{
+	single icon/.style={
+		font={\fontsize{34}{38}\selectfont}
+	},
+	host description/.style={
+	},
+	host box/.style={
+		inner sep=0.5em,
+		draw=black!75!white,
+		fill=white,
+		rounded corners,
+		line width=0.1em
+	},
+	region box/.style={
+		inner sep=2em,
+		rounded corners=2em,
+		line width=0.1em,
+		fill=#1!3!white
+	},
+	region descriptor/.style={
+		outer sep=0,
+		execute at begin node={\fontsize{7em}{7em}\selectfont\scshape},
+		color=#1!15!white
+	},
+	% tag for marking devices or services as DNS, DHCP, etc. with a customized color
+	tag/.style={
+		draw=none,
+		fill=#1,
+		rectangle,
+		rounded corners=2pt,
+		outer sep=3pt,
+		font=\bfseries\scriptsize,
+		text=white
+	},
+	% connection types
+	generic/.style={
+		solid,
+		line width=0.2em,
+		rounded corners
+	},
+	ethernet/.style={
+		generic
+	},
+	wifi/.style={
+		generic,
+		dashed,
+	},
+	vpn/.style={
+		generic,
+		decoration={
+			waves,
+			radius=0.8em,
+			segment length=.55em,
+			angle=30
+		}
+	}
+}
+
+% commands to show device and service icons at fixed size, etc.
+\newcommand{\interfaceImage}[1]{%
+	\raisebox{-.1\height}{\includegraphics[height=12pt]{#1}}%
+}
+\newcommand{\deviceImage}[1]{%
+	\includegraphics[width=5em, height=3em, keepaspectratio]{devices/#1}%
+}
+\newcommand{\deviceImageInline}[1]{%
+	\raisebox{-.25\height}{%
+		\parbox[t]{2em}{%
+			\centering%
+			\includegraphics[width=2em, height=2em, keepaspectratio]{devices/#1}%
+		}%
+	}%
+}
+\newcommand{\ip}[2]{%
+	\textbf{\textcolor{#2}{#1}}
+}
+
+% clickable URLs shown without protocol
+\newcommand{\https}[1]{%
+	\href{https://#1}{\nolinkurl{#1}}%
+}
+\newcommand{\http}[1]{%
+	\href{http://#1}{\nolinkurl{#1}}%
+}
+
+% usage: \service{image}{textual description}{url}
+\newcommand{\service}[3]{%
+	\ifblank{#1}{%
+		\hspace{2em}%
+	}{%
+		\raisebox{-.3\height}{%
+			\includegraphics[height=2em]{services/#1}%
+		}\hspace{.5em}%
+	}%
+	\parbox[m]{10em}{%
+		#2%
+		\ifblank{#3}{}{%
+			\newline%
+			\tiny\textcolor{gray}{#3}%
+		}%
+	}
+}
+
+\newcommand{\planned}{\hfill\scriptsize\textcolor{black!60}{\textit{(planned)}}}
+\newcommand{\temporary}{\hfill\scriptsize\textcolor{black!60}{\textit{(temporary)}}}
+
+\begin{document}
+	
+% remember picture is needed to retain positions of tcolorboxes (otherwise all edges will be misplaced)
+\begin{tikzpicture}[remember picture]
+	\pgfdeclarelayer{regions}
+	\pgfdeclarelayer{hostboxes}
+	\pgfsetlayers{regions,hostboxes,main}
+	
+	% --------------- start internet ---------------
+	\node[single icon, label=above:Internet] (internet) {\faIcon{globe}};
+	\path (internet) -- (0,-2) coordinate[name=below-internet];
+	% --------------- end internet ---------------	
+	
+	% --------------- start ISP ---------------
+	\node[single icon, left=16em of below-internet, label=below:ISP] (isp-home) {\faIcon{building}};
+	% --------------- end ISP ---------------
+	
+	% --------------- start router ---------------
+	% host description
+	\node[host description, below left=12em of isp-home] (router-description) {%
+		\begin{tcolorbox}[
+			adjusted title=router,
+			host description box
+		]			
+			\ip{192.168.0.1}{subnet-home}
+		
+			\tcblower
+			\deviceImage{my-router-image}
+			
+			HomeBox CM 3000
+		\end{tcolorbox}
+	};
+	
+	% services
+	\node[
+		below=0em of router-description.south west,
+		anchor=north west
+	] (router-services) {
+	};
+	
+	% network interfaces
+	\node[anchor=north] at (router-services.north east -| router-description.east) (router-interfaces) {
+		\begin{tcbitemize}[interfaces raster]
+			\tcbitem[remember as=router-modem] modem\hfill\faIcon{grip-lines}
+			\tcbitem[remember as=router-eth0] eth0..3\hfill\faIcon{ethernet}
+			\tcbitem[remember as=router-wlan0] wlan0\hfill\faIcon{broadcast-tower}
+			\tcbitem[remember as=router-wlan1] wlan1\hfill\faIcon{broadcast-tower}
+		\end{tcbitemize}
+	};
+	
+	% draw box around all parts defining a host
+	\begin{pgfonlayer}{hostboxes}
+		\node[
+			host box,
+			fit=(router-description.center) (router-services.south) (router-services.west) (router-interfaces.south)
+		] (router-host-box) {};
+	\end{pgfonlayer}
+	% --------------- end router ---------------
+	
+
+	% --------------- start printer ---------------
+	\node[host description, right=18em of router-description] (printer-description) {%
+		\begin{tcolorbox}[
+			host description box,
+			remember as=printer
+		]
+		\ip{192.168.0.3}{subnet-home}
+		
+		\tcblower
+		\deviceImage{my-printer-image}
+		
+		InkPrint\\
+		E-7800
+		\end{tcolorbox}
+	};
+	% --------------- end printer ---------------
+	
+
+	% --------------- start raspberrypi ---------------
+	% host description
+	\node[host description, below=of printer-description] (raspberrypi-description) {%
+		\begin{tcolorbox}[
+			adjusted title=raspberrypi,
+			host description box
+		]
+		\ip{192.168.0.2}{subnet-home}
+		\vspace{\baselineskip}
+		
+		\begin{tabular}{@{}ll@{}}
+			\faIcon{compact-disc} & Pi OS buster \\
+			\faIcon{memory} & 1GB \\
+			\faIcon{hdd} & 32GB \\
+		\end{tabular}
+		
+		\tcblower
+		\deviceImage{my-raspberry-pi-image}
+		
+		RPi 3B+
+		\end{tcolorbox}
+	};
+	
+	% services
+	\node[
+		below=0em of raspberrypi-description.south east,
+		anchor=north east
+	] (raspberrypi-services) {
+		\begin{tcboxedraster}[services]{services raster}
+			\tcbox[enhanced, remember as=raspberrypi-pihole]{\service{pihole}{pi-hole}{\http{pi-hole.internal.lan}}}
+			\begin{tcboxedraster}[services]{dockerized raster}
+				\tcbox{\service{homeassistant}{Home Assistant}{\http{hass.internal.lan}}}
+			\end{tcboxedraster}
+		\end{tcboxedraster}
+	};
+
+	% service tags
+	\node[anchor=east, tag=subnet-home] at (raspberrypi-pihole.east) {DNS};
+	
+	% network interfaces
+	\node[anchor=north] at (raspberrypi-services.north west -| raspberrypi-description.west) (raspberrypi-interfaces) {
+		\begin{tcbitemize}[interfaces raster]
+			\tcbitem[remember as=raspberrypi-eth0] \faIcon{ethernet}\hfill eth0
+		\end{tcbitemize}
+	};
+	
+	% draw box around all parts defining a host
+	\begin{pgfonlayer}{hostboxes}
+	\node[
+		host box,
+		fit=(raspberrypi-description.center) (raspberrypi-services.south) (raspberrypi-services.east) (raspberrypi-interfaces.south)
+	] (raspberrypi-host-box) {};
+	\end{pgfonlayer}
+	% --------------- end raspberrypi ---------------
+	
+	% --------------- start guest devices ---------------
+	\node[host description, below=4em of router-host-box.south, anchor=north, inner sep=0em] (guest-devices) {
+		\begin{tcboxedraster}[devices]{%
+			devices raster,
+			title={Guest Devices\hspace{1em}\ip{192.168.1.0/24}{subnet-guest}},
+			remember as=guest-devices-raster}
+			\tcbox{\deviceImageInline{my-video-game-console-image} Video Game Console}
+			\tcbox{\deviceImageInline{my-ebook-reader-image} E-Book Reader}
+			\tcbox{\textit{... more ...}}
+		\end{tcboxedraster}
+	};
+	% --------------- end guest devices ---------------
+	
+	
+	% --------------- start laptop ---------------
+	% host description
+	\node[host description, below=of raspberrypi-host-box.south] (laptop-description) {%
+		\begin{tcolorbox}[
+			adjusted title=laptop,
+			host description box
+		]
+		\ip{192.168.0.3}{subnet-home}
+		\vspace{\baselineskip}
+		
+		\begin{tabular}{@{}ll@{}}
+			\faIcon{compact-disc} & Mint 20.3 \\
+			\faIcon{memory} & 32GB \\
+			\faIcon{hdd} & 1TB \\
+		\end{tabular}
+		
+		\tcblower
+		\deviceImage{my-laptop-image}
+		
+		Laptop Z680
+		\end{tcolorbox}
+	};
+	
+	% services
+	\node[
+		below=0em of laptop-description.south east,
+		anchor=north east
+	] (laptop-services) {
+		\begin{tcboxedraster}[services]{services raster}
+			\tcbox{\service{wireguard}{wireguard}{}}
+		\end{tcboxedraster}
+	};
+	
+	% network interfaces
+	\node[anchor=north] at (laptop-services.north west -| laptop-description.west) (laptop-interfaces) {
+		\begin{tcbitemize}[interfaces raster]
+			\tcbitem[remember as=laptop-enp0s25] \faIcon{ethernet}\hfill enp0s25
+			\tcbitem[remember as=laptop-wlp3s0] \faIcon{broadcast-tower}\hfill wlp3s0
+			\tcbitem[remember as=laptop-wg0] \faIcon{dragon}\hfill wg0
+		\end{tcbitemize}
+	};
+	
+	% draw box around all parts defining a host
+	\begin{pgfonlayer}{hostboxes}
+		\node[
+			host box,
+			fit=(laptop-description.center) (laptop-services.south) (laptop-services.east) (laptop-interfaces.south)
+		] (laptop-host-box) {};
+	\end{pgfonlayer}
+	% --------------- end laptop ---------------
+		
+
+	% --------------- start vps ---------------
+	% host description
+	\node[host description, right=65em of router-description.north east, anchor=north] (vps-description) {%
+		\begin{tcolorbox}[
+			adjusted title=vps,
+			host description box
+		]
+		\ip{11.22.33.44}{subnet-none}
+		\vspace{\baselineskip}
+		
+		\begin{tabular}{@{}ll@{}}
+			\faIcon{compact-disc} & Debian 11 \\
+			\faIcon{memory} & 4GB \\
+			\faIcon{hdd} & 64GB \\
+		\end{tabular}
+		
+		\tcblower
+		%\deviceImage{my-hoster-image}
+		
+		HyperSpeed Flex Z25
+		\end{tcolorbox}
+	};
+	
+	% services
+	\node[
+		below=0em of vps-description.south east,
+		anchor=north east
+	] (vps-services) {
+		\begin{tcboxedraster}[services]{services raster}
+			\begin{tcboxedraster}[services]{dockerized raster}
+				\tcbox{\service{wireguard}{wireguard}{}}
+				\tcbox{\service{wordpress}{WordPress \planned{}}{}}
+			\end{tcboxedraster}
+		\end{tcboxedraster}
+	};
+	
+	% network interfaces
+	\node[anchor=north] at (vps-services.north west -| vps-description.west) (vps-interfaces) {
+		\begin{tcbitemize}[interfaces raster]
+			\tcbitem[remember as=vps-eth0] \faIcon{ethernet}\hfill{}eth0
+			\tcbitem[remember as=vps-wg0] \faIcon{dragon}\hfill{}wg0
+		\end{tcbitemize}
+	};
+	
+	% draw box around all parts defining a host
+	\begin{pgfonlayer}{hostboxes}
+		\node[
+			host box,
+			fit=(vps-description.center) (vps-services.south) (vps-services.east) (vps-interfaces.south)
+		] (vps-host-box) {};
+	\end{pgfonlayer}
+	% --------------- end vps ---------------
+	
+
+	% --------------- start legend ---------------
+	\matrix[
+		anchor=north west,
+		yshift=2em,
+		matrix of nodes,
+		row sep=-0.1em,
+		column 1/.style={anchor=west},
+		column 2/.style={anchor=west},
+		host box,
+		font=\small
+	] at (router-description.west |- internet) (legend) {
+		& {\Large\sffamily\bfseries Legend} \\
+		\draw[ethernet] (0,0) -- (0.75,0);	& Ethernet \\
+		\draw[wifi] (0,0) -- (0.75,0);	& Wifi \\
+		\draw[vpn, decorate] (0,0) -- (0.75,0);	& VPN \\
+		\draw[generic] (0,0) --(0.75,0);	& Other \\
+	};
+	\node[below=1em of legend.south west, anchor=north west, text width=8em] {\small{}last updated:\\\today};
+	% --------------- end legend ---------------
+
+
+	% --------------- start network regions ---------------
+	\begin{pgfonlayer}{regions}
+		% Home
+		\node[
+			region box=blue,
+			fit=(router-host-box.west) (router-description.north) (raspberrypi-host-box.east) (laptop-host-box.south)
+		] (home-box) {};
+		\node[region descriptor=blue, above, anchor=south west, outer sep=1.5em] at (home-box.south west) {Home};
+		
+		% Remote
+		\node[
+			region box=red,
+			fit=(vps-eth0.west) (vps-description.north west) (vps-host-box.south east)
+		] (remote-box) {};
+		\node[region descriptor=red, left, anchor=north east] at (remote-box.south east) {Remote};
+	\end{pgfonlayer}
+	% --------------- end network regions ---------------
+
+
+	% --------------- start network connections ---------------
+	\begin{scope}[generic]
+		\draw (internet) -- (below-internet);
+		\draw (isp-home) -| (below-internet);
+		\draw (vps-eth0.west) -- ++(-2,0) |- (below-internet) -- ++(0,1);
+		\draw (router-modem.east) -- ++(1,0) |- (isp-home);
+		
+		% connections inside the router
+		\draw (router-modem.west) ++(0,0.15) -- ++(-0.5,0) |- (router-wlan1.west);
+		\draw foreach \intf in {router-eth0, router-wlan0}
+		{(router-modem.west) ++(0,-0.15) -- +(-0.25,0) |- (\intf)};
+	\end{scope}
+
+	\begin{scope}[ethernet]
+		\draw[subnet-home] (raspberrypi-eth0.west) -- ++(-1,0) |- (router-eth0.east);
+		\draw[subnet-home] (printer.west) -- ++(-1.5,0) |- (router-eth0.east);
+	\end{scope}
+
+	\begin{scope}[wifi]
+		% wifi-guest
+		\draw[subnet-guest] (router-wlan1.east) -- ++(1,0) |- (guest-devices-raster.east) node[pos=0.25, above, rotate=90] {\faIcon{wifi} \parbox{7em}{\textbf{wifi-guest, 2.4GHz}}};
+		
+		% wifi-home
+		\draw[subnet-home] (laptop-wlp3s0.west) -- ++(-2,0) |- (router-wlan0.east) node[pos=0.25, below, rotate=90] {\faIcon{wifi} \parbox{7em}{\textbf{wifi-home, 5GHz}}};
+	\end{scope}
+
+	\begin{scope}[vpn, subnet-vpn]
+		\draw[decorate] (laptop-wg0.west) ++(.3,0) -- ++(-.8,0);		
+		\draw[decorate] (vps-wg0.west) ++(.3,0) -- ++(-.8,0);
+	\end{scope}
+	% --------------- end network connections ---------------
+\end{tikzpicture}
+	
+\end{document}
