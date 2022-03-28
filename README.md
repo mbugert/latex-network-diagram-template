@@ -1,7 +1,6 @@
 # Template for LaTeX-based Network Diagrams
 [![network diagram](doc/network_diagram_with_images.png)](network_diagram_with_images.pdf)
-
-Have fun!
+It relies on [tcolorboxes](https://www.ctan.org/pkg/tcolorbox) inside a [tikzpicture](https://www.ctan.org/pkg/pgf). Have fun!
 
 * [Blogpost](https://mbugert.de/posts/2022-03-27-latex-home-network-diagram/)
 
