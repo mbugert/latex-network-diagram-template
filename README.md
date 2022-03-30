@@ -1,8 +1,16 @@
 # Template for LaTeX-based Network Diagrams
+<!-- convert -density 96 network_diagram_with_images.pdf doc/network_diagram_with_images.png -->
 [![network diagram](doc/network_diagram_with_images.png)](network_diagram_with_images.pdf)
-It relies on [tcolorboxes](https://www.ctan.org/pkg/tcolorbox) inside a [tikzpicture](https://www.ctan.org/pkg/pgf). Have fun!
 
 * [Blogpost](https://mbugert.de/posts/2022-03-27-latex-home-network-diagram/)
+
+## Getting started
+- One-liner for building the diagram:
+  ```bash
+  docker run --rm -it -v $(pwd):/workdir danteev/texlive latexmk -pdf network_diagram_with_images.tex
+  ```
+- The diagram relies on [tcolorboxes](https://www.ctan.org/pkg/tcolorbox) inside a [tikzpicture](https://www.ctan.org/pkg/pgf). Icons are from [fontawesome](https://fontawesome.com/v5/search?m=free), using the [fontawesome5](https://www.ctan.org/pkg/fontawesome5) package.
+- New hosts can be added quickly (just copy-paste what's there, and use find-replace to ensure node identifiers are unique). Positioning hosts and drawing edges between them needs to be done manually, which typically eats up the most time. :)
 
 ## License
 [CC BY 4.0](LICENSE.txt)
