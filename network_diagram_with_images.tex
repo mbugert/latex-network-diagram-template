@@ -23,14 +23,15 @@
 \definecolor{subnet-home}{HTML}{E57400}
 \definecolor{subnet-guest}{HTML}{14C300}
 \definecolor{subnet-vpn}{HTML}{AD0022}
-\definecolor{dockerBright}{HTML}{0A97C4}
-\definecolor{dockerDark}{HTML}{088AB4}
+\definecolor{docker-bright}{HTML}{0A97C4}
+\definecolor{docker-dark}{HTML}{088AB4}
 
 \tcbset{
 	skin=enhanced,
 	boxrule=0.1em,
 	left=0.25em,
 	right=0.25em,
+	% box with hostname and device specs
 	host description box/.style={
 		width=19em,
 		sidebyside,
@@ -39,6 +40,7 @@
 		fontupper=\small,
 		fontlower=\small
 	},
+	% tcbraster for network interfaces
 	interfaces raster/.style={
 		raster columns=1,
 		raster width=6.75em,
@@ -54,7 +56,8 @@
 			valign=center
 		}
 	},
-	services/.style={
+	% tcbraster for host services
+	services raster/.style={
 		raster columns=1,
 		boxrule=0.1em,
 		raster width=14em,
@@ -68,20 +71,23 @@
 			boxrule=0.1em
 		}
 	},
-	% Never drawn, only used as a container. Width is set to the same width as "services". If width is not specified, the raster would extend much further towards the right because the default width is \linewidth (uncomment 'blankest' to see it).
-	services raster/.style={
+	% box around host services:
+	% Never drawn, only used as a container. Width is set to the same width as "services". If width is not specified, the box would extend much further towards the right because the default width is \linewidth (uncomment 'blankest' to see it).
+	services box/.style={
 		blankest,
 		width=14em
 	},
-	dockerized raster/.style={
+	% box around dockerized host services
+	dockerized box/.style={
 		title={Dockerized\hfill\includegraphics[height=12pt]{services/docker}},
 		fonttitle=\bfseries,
-		colframe=dockerDark,
-		colback=dockerBright,
+		colframe=docker-dark,
+		colback=docker-bright,
 		left=0.25em,
 		right=0.25em
 	},
-	devices raster/.style={
+	% box around devices with less details
+	devices box/.style={
 		width=20em,
 		fonttitle=\bfseries\large,
 		fontupper=\small,
@@ -90,7 +96,8 @@
 		colback=white,
 		coltitle=black!75!white
 	},
-	devices/.style={
+	% tcbraster for devices with less details
+	devices raster/.style={
 		raster columns=1,
 		boxrule=0.1em,
 		raster width=20em,
@@ -114,6 +121,7 @@
 	},
 	host description/.style={
 	},
+	% box drawn around all bits defining a host using tikz fit
 	host box/.style={
 		inner sep=0.5em,
 		draw=black!75!white,
@@ -121,11 +129,12 @@
 		rounded corners,
 		line width=0.1em
 	},
+	% box drawn around all hosts defining a region using tikz fit
 	region box/.style={
 		inner sep=2em,
 		rounded corners=2em,
 		line width=0.1em,
-		fill=#1!3!white
+		fill=#1!5!white
 	},
 	region descriptor/.style={
 		outer sep=0,
@@ -320,9 +329,9 @@
 		below=0em of raspberrypi-description.south east,
 		anchor=north east
 	] (raspberrypi-services) {
-		\begin{tcboxedraster}[services]{services raster}
+		\begin{tcboxedraster}[services raster]{services box}
 			\tcbox[enhanced, remember as=raspberrypi-pihole]{\service{pihole}{pi-hole}{\http{pi-hole.internal.lan}}}
-			\begin{tcboxedraster}[services]{dockerized raster}
+			\begin{tcboxedraster}[services raster]{dockerized box}
 				\tcbox{\service{homeassistant}{Home Assistant}{\http{hass.internal.lan}}}
 			\end{tcboxedraster}
 		\end{tcboxedraster}
@@ -349,8 +358,8 @@
 	
 	% --------------- start guest devices ---------------
 	\node[host description, below=4em of router-host-box.south, anchor=north, inner sep=0em] (guest-devices) {
-		\begin{tcboxedraster}[devices]{%
-			devices raster,
+		\begin{tcboxedraster}[devices raster]{%
+			devices box,
 			title={Guest Devices\hspace{1em}\ip{192.168.1.0/24}{subnet-guest}},
 			remember as=guest-devices-raster}
 			\tcbox{\deviceImageInline{my-video-game-console-image} Video Game Console}
@@ -389,7 +398,7 @@
 		below=0em of laptop-description.south east,
 		anchor=north east
 	] (laptop-services) {
-		\begin{tcboxedraster}[services]{services raster}
+		\begin{tcboxedraster}[services raster]{services box}
 			\tcbox{\service{wireguard}{wireguard}{}}
 		\end{tcboxedraster}
 	};
@@ -441,8 +450,8 @@
 		below=0em of vps-description.south east,
 		anchor=north east
 	] (vps-services) {
-		\begin{tcboxedraster}[services]{services raster}
-			\begin{tcboxedraster}[services]{dockerized raster}
+		\begin{tcboxedraster}[services raster]{services box}
+			\begin{tcboxedraster}[services raster]{dockerized box}
 				\tcbox{\service{wireguard}{wireguard}{}}
 				\tcbox{\service{wordpress}{WordPress \planned{}}{}}
 			\end{tcboxedraster}
@@ -473,8 +482,7 @@
 		yshift=2em,
 		matrix of nodes,
 		row sep=-0.1em,
-		column 1/.style={anchor=west},
-		column 2/.style={anchor=west},
+		every node/.style={anchor=west},
 		host box,
 		font=\small
 	] at (router-description.west |- internet) (legend) {
@@ -484,7 +492,7 @@
 		\draw[vpn, decorate] (0,0) -- (0.75,0);	& VPN \\
 		\draw[generic] (0,0) --(0.75,0);	& Other \\
 	};
-	\node[below=1em of legend.south west, anchor=north west, text width=8em] {\small{}last updated:\\\today};
+	\node[below=1em of legend.south west, anchor=north west, text width=8em, font=\small] {last updated:\\\today};
 	% --------------- end legend ---------------
 
 
@@ -534,6 +542,7 @@
 	\end{scope}
 
 	\begin{scope}[vpn, subnet-vpn]
+		% using large radii on the waves decoration introduces ugly whitespace, so we apply some offset to compensate
 		\draw[decorate] (laptop-wg0.west) ++(.3,0) -- ++(-.8,0);		
 		\draw[decorate] (vps-wg0.west) ++(.3,0) -- ++(-.8,0);
 	\end{scope}
